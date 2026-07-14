@@ -144,6 +144,44 @@
     .shape{ animation:none; }
     .num.tick{ animation:none; }
   }
+
+  .balloon{
+    position:absolute;
+    bottom:-160px;
+    width:56px;
+    height:70px;
+    border-radius:50% 50% 50% 50% / 58% 58% 42% 42%;
+    animation-name:rise;
+    animation-timing-function:ease-in;
+    animation-fill-mode:forwards;
+  }
+  .balloon::before{
+    content:'';
+    position:absolute;
+    left:50%;
+    top:100%;
+    width:2px;
+    height:46px;
+    background:rgba(255,255,255,.5);
+    transform:translateX(-50%);
+  }
+  .balloon::after{
+    content:'';
+    position:absolute;
+    left:50%;
+    top:-8px;
+    width:10px;
+    height:12px;
+    background:inherit;
+    clip-path:polygon(50% 0, 0% 100%, 100% 100%);
+    transform:translateX(-50%);
+  }
+  @keyframes rise{
+    0%{ transform:translateY(0) translateX(0) rotate(-4deg); opacity:0; }
+    8%{ opacity:1; }
+    50%{ transform:translateY(-55vh) translateX(24px) rotate(4deg); }
+    100%{ transform:translateY(-120vh) translateX(-18px) rotate(-6deg); opacity:.9; }
+  }
 </style>
 </head>
 <body>
@@ -153,6 +191,8 @@
 <div class="shape"></div>
 <div class="shape"></div>
 <div class="shape"></div>
+
+<div id="balloon-layer" style="position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:5;"></div>
 
 <div class="stage">
   <div class="eyebrow">Kat's first house</div>
@@ -190,6 +230,7 @@
     if (diff <= 0){
       document.getElementById('grid').innerHTML = '<div class="done">🏡🎉 Welcome home, Kat!</div>';
       clearInterval(timer);
+      bigCelebration();
       return;
     }
 
@@ -216,6 +257,42 @@
 
   tick();
   const timer = setInterval(tick, 1000);
+
+  // ---- Balloons ----
+  const balloonLayer = document.getElementById('balloon-layer');
+  const balloonColors = ['#FFD23F', '#FF4E9E', '#6C1FA8', '#06D6A0', '#FF7A5C'];
+
+  function spawnBalloon(opts = {}) {
+    const b = document.createElement('div');
+    b.className = 'balloon';
+    const color = opts.color || balloonColors[Math.floor(Math.random() * balloonColors.length)];
+    const size = opts.size || (46 + Math.random() * 30);
+    const duration = opts.duration || (7 + Math.random() * 4);
+    const left = opts.left != null ? opts.left : Math.random() * 92;
+
+    b.style.background = `radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), ${color} 60%)`;
+    b.style.left = left + '%';
+    b.style.width = size + 'px';
+    b.style.height = (size * 1.25) + 'px';
+    b.style.animationDuration = duration + 's';
+
+    balloonLayer.appendChild(b);
+    setTimeout(() => b.remove(), duration * 1000 + 200);
+  }
+
+  // a few balloons drifting up on load
+  for (let i = 0; i < 4; i++) {
+    setTimeout(() => spawnBalloon(), i * 500);
+  }
+
+  // gentle ambient balloon every few seconds
+  setInterval(() => spawnBalloon(), 3200);
+
+  function bigCelebration() {
+    for (let i = 0; i < 30; i++) {
+      setTimeout(() => spawnBalloon({ duration: 6 + Math.random() * 3 }), i * 120);
+    }
+  }
 </script>
 
 </body>
