@@ -182,6 +182,24 @@
     50%{ transform:translateY(-55vh) translateX(24px) rotate(4deg); }
     100%{ transform:translateY(-120vh) translateX(-18px) rotate(-6deg); opacity:.9; }
   }
+  .balloon{ pointer-events:auto; cursor:pointer; }
+  .balloon.popping{
+    animation:none !important;
+    transition:transform .18s ease, opacity .18s ease;
+    transform:scale(1.6);
+    opacity:0;
+  }
+
+  .surprise-msg{
+    margin-top:24px;
+    font-size:clamp(14px, 2vw, 18px);
+    color:var(--sunburst);
+    font-weight:600;
+    min-height:24px;
+    opacity:0;
+    transition:opacity 1s ease;
+  }
+  .surprise-msg.show{ opacity:1; }
 </style>
 </head>
 <body>
@@ -196,7 +214,7 @@
 
 <div class="stage">
   <div class="eyebrow">Closing day countdown</div>
-  <h1>Kat's First <span>House</span></h1>
+  <h1><span>Kat's First House</span></h1>
   <p class="subtext">Counting down to Kat's closing day on her very first house — July 20, 2026.</p>
 
   <div class="grid" id="grid">
@@ -207,6 +225,8 @@
   </div>
 
   <div class="footer-note">Closing date: July 20, 2026</div>
+
+  <div class="surprise-msg" id="quoteMsg"></div>
 </div>
 
 <script>
@@ -278,6 +298,8 @@
 
     balloonLayer.appendChild(b);
     setTimeout(() => b.remove(), duration * 1000 + 200);
+
+    b.addEventListener('click', () => popBalloon(b));
   }
 
   // a few balloons drifting up on load
@@ -293,6 +315,84 @@
       setTimeout(() => spawnBalloon({ duration: 6 + Math.random() * 3 }), i * 120);
     }
   }
+
+  function popBalloon(b) {
+    if (b.classList.contains('popping')) return;
+    b.classList.add('popping');
+    playPop();
+    setTimeout(() => b.remove(), 200);
+  }
+
+  // ---- Synthesized pop sound (no external files needed) ----
+  let audioCtx;
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function playPop() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+
+    // Quick pitch-drop "pop" tone
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(900 + Math.random() * 200, now);
+    osc.frequency.exponentialRampToValueAtTime(120, now + 0.09);
+    oscGain.gain.setValueAtTime(0.5, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+
+    // Short burst of filtered noise for a "snap"
+    const bufferSize = ctx.sampleRate * 0.06;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = 800;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.35, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+  }
+
+  // ---- Rotating motivational quotes ----
+  const quoteMsg = document.getElementById('quoteMsg');
+  const quotes = [
+    "It's almost time, Kat 🔑",
+    "New floors, new memories ✨",
+    "Home sweet home is on its way 🏡",
+    "Every box you pack is a step closer",
+    "This is really happening!",
+    "Soon you'll be picking paint colors 🎨",
+    "Your first house, your first chapter",
+  ];
+  let quoteIndex = 0;
+
+  function showNextQuote() {
+    quoteMsg.classList.remove('show');
+    setTimeout(() => {
+      quoteMsg.textContent = quotes[quoteIndex % quotes.length];
+      quoteIndex++;
+      quoteMsg.classList.add('show');
+    }, 1000);
+  }
+
+  showNextQuote();
+  setInterval(showNextQuote, 5000);
 </script>
 
 </body>
